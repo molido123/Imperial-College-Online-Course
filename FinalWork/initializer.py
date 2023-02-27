@@ -10,6 +10,20 @@ from nltk.corpus import stopwords
 noise = stopwords.words("english")
 
 
+# data  [("word", frequency)]
+def depict(data: list[tuple[str, int]], name: str):
+    # depict the picture of most common adj
+    x_values = [word[0] for word in data]
+    y_values = [word[1] for word in data]
+    plt.bar(x_values, y_values)
+    plt.xlabel('Word')
+    plt.xticks(rotation=45)
+    plt.ylabel('Frequency')
+    plt.title('Most Commonly Used ' + name + ' Words')
+    plt.savefig("Most Commonly Used " + name + " Words.png")
+    plt.show()
+
+
 def part_of_speech(words):
     # Define the classes and their corresponding keywords
     data = []
@@ -28,16 +42,43 @@ def part_of_speech(words):
                 adj.append(data[i][j][0])
     words_count = Counter(adj)
     # depict the picture of most common adj
-    top_words = words_count.most_common(10)  # Change the number to show more/less words
-    x_values = [word[0] for word in top_words]
-    y_values = [word[1] for word in top_words]
-    plt.bar(x_values, y_values)
-    plt.xlabel('Word')
-    plt.xticks(rotation=45)
-    plt.ylabel('Frequency')
-    plt.title('Most Commonly Used adj Words')
-    plt.savefig("Most Commonly Used adj Words.png")
-    plt.show()
+    top_words = words_count.most_common(10)
+    # depict it
+    depict(top_words, "ADJ")
+    #
+    #
+    # depict the picture of most common JJS
+    JJS = []
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+            if data[i][j][1] == "JJS":
+                JJS.append(data[i][j][0])
+    words_count = Counter(JJS)
+    # depict the picture of most common noun
+    depict(words_count.most_common(10), "JJS")
+    #
+    #
+    # depict the picture of most common verb
+    verb = []
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+            if data[i][j][1] == "VB":
+                verb.append(data[i][j][0])
+    words_count = Counter(verb)
+    # depict the picture of most common verb
+    depict(words_count.most_common(10), "VB")
+    #
+    #
+    # depict the picture of most common noun
+    noun = []
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+            if data[i][j][1] == "NN":
+                noun.append(data[i][j][0])
+    words_count = Counter(noun)
+    # depict the picture of most common noun
+    depict(words_count.most_common(10), "NN")
+    #
 
 
 def general_counter(words):
