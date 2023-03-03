@@ -41,7 +41,7 @@ def main():
     input_reviews = comment.tolist()
     input_reviews = [x.lower() for x in input_reviews]
     attitude = []
-    Neutral_point = 0.51
+    Neutral_point = 0.55
     NG = 0
     PS = 0
     NT = 0
