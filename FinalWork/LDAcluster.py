@@ -1,21 +1,16 @@
-import regex as re
-import warnings
-
+import gensim
 import gensim.corpora as corpora
+import numpy as np
 import pandas as pd
+import pyLDAvis.gensim_models
 import regex as re
-import spacy
 from gensim import models
+from gensim.models import CoherenceModel
 from gensim.models import LdaModel
 from matplotlib import pyplot as plt
 from nltk.corpus import stopwords
 
-# Gensim
-
 stop_words = stopwords.words('english')
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-# Creating nlp object
-nlp = spacy.load('en_core_web_sm', disable=['parser', 'ner'])
 # decide the number of models you want to get
 NUM_ROUND = 16
 
@@ -30,14 +25,22 @@ def clean_text(text):
     text = re.sub(r'@\S+', '', text)
     text = re.sub(r'#\S+', '', text)
     text = re.sub(r"\d", "", text)
+    # remove the emoji
     text = re.sub(r"\p{Emoji}", "", text)
+    # meaningless length
+    if len(text) <= 2:
+        text = ""
     return text
 
 
 # main function
+# generate the dic and corpus for training
 def LDA_implementation():
     df = pd.read_csv("data/chatgpt-reddit-comments.csv")
+    channels = list(set(df["subreddit"].dropna().tolist()))
+    df = df[df['subreddit'] == 'r/dataisbeautiful']
     df.dropna(inplace=True)
+    # first step cleaning
     df['comment_body'] = df['comment_body'].apply(lambda x: clean_text(x))
     df.dropna(inplace=True)
     comments = df['comment_body']
@@ -53,20 +56,26 @@ def LDA_implementation():
     print(dictionary.most_common(20))
     # trun the text lists into word bag lists
     corpus = [dictionary.doc2bow(text) for text in text_lists]
-    # # train the model again
-    # train_model(corpus, dictionary)
+    # train model
+    # train_model(corpus, dic=dictionary)
     # plot_perplexity(corpus)
-    # compute_coherence(corpus,dictionary)
+    # compute_coherence(corpus, dictionary)
+
     #
+    # view(num=3, corpus=corpus, dictionary=dictionary, version='r/ChatGPT')
     #
-    # estimate the best model visually
-    import pyLDAvis.gensim_models
-    from gensim import models
-    model_name = 'model/lda_3.model'  #
-    pos_model = models.ldamodel.LdaModel.load(model_name)
-    pyLDAvis.enable_notebook()
-    vis = pyLDAvis.gensim_models.prepare(pos_model, corpus, dictionary)
-    pyLDAvis.save_html(vis, 'general.html')
+    """this code below is used to apply a pre-trained LDA model to a corpus, extract the major topic for each 
+    document in the corpus, and add the major topic information to a pandas DataFrame. """
+    # Obtaining the main topic for each review:
+    num = 3
+    model_name = 'model/lda_{}.model'.format(num)
+    optimal_model = models.ldamodel.LdaModel.load(model_name)
+    all_topics = optimal_model.get_document_topics(corpus)
+    all_topics_csr = gensim.matutils.corpus2csc(all_topics)
+    all_topics_numpy = all_topics_csr.T.toarray()
+    major_topic = [np.argmax(arr) for arr in all_topics_numpy]
+    df['major_topic'] = major_topic
+    depict(df, 'dataisbeautiful')
 
 
 def train_model(corpus, dic):
@@ -100,9 +109,6 @@ def plot_perplexity(corpus):
     plt.show()
 
 
-from gensim.models import CoherenceModel
-
-
 def compute_coherence(corpus, dictionary):
     x_list = []
     y_list = []
@@ -116,7 +122,8 @@ def compute_coherence(corpus, dictionary):
             # compute the coherence
             x_list.append(i)
             y_list.append(cv_tmp.get_coherence())
-        except:
+        except Exception as e:
+            print(e)
             print('not found this model:{}'.format(temp_model))
     plt.rcParams['axes.unicode_minus'] = False
     plt.plot(x_list, y_list)
@@ -124,6 +131,24 @@ def compute_coherence(corpus, dictionary):
     plt.ylabel('coherence score')
     plt.legend('coherence_values', loc='best')
     plt.savefig('coherence_values.png')
+    plt.show()
+
+
+def view(num, corpus, dictionary, version="general"):
+    model_name = 'model/lda_{}.model'.format(num)
+    pos_model = models.ldamodel.LdaModel.load(model_name)
+    pyLDAvis.enable_notebook()
+    vis = pyLDAvis.gensim_models.prepare(pos_model, corpus, dictionary)
+    pyLDAvis.save_html(vis, '{}_lad_{}_.html'.format(version[2:], num))
+
+
+def depict(df, name='general'):
+    # Plotting Data frequency for topics
+    df['major_topic'].value_counts().sort_values(ascending=False).plot(kind='bar')
+    plt.xlabel("Comment Topics")
+    plt.ylabel("Number of Comments")
+    plt.title("Topic wise Data Frequency--{}".format(name))
+    plt.savefig('{}_topics.png'.format(name))
     plt.show()
 
 
